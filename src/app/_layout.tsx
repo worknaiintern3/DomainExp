@@ -1,18 +1,57 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import React, { useEffect } from 'react';
+import { Platform } from 'react-native';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as NavigationBar from 'expo-navigation-bar';
+import * as SystemUI from 'expo-system-ui';
+import { AuthProvider } from '../store/auth-context';
+import { ThemeProvider, useTheme } from '../store/theme-context';
+import { SettingsProvider } from '../store/settings-context';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+function NavigationRoot() {
+  const { colors, isDark } = useTheme();
 
-SplashScreen.preventAutoHideAsync();
+  useEffect(() => {
+    // Sync root System UI window background color
+    SystemUI.setBackgroundColorAsync(colors.background).catch(() => {});
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+    // Sync Android bottom system navigation bar with current light/dark theme
+    if (Platform.OS === 'android') {
+      try {
+        NavigationBar.setStyle(isDark ? 'dark' : 'light');
+      } catch {}
+    }
+  }, [isDark, colors.background]);
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+          animation: 'fade',
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <SettingsProvider>
+            <NavigationRoot />
+          </SettingsProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
